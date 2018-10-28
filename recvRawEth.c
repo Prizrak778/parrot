@@ -30,6 +30,31 @@
 #define DEFAULT_IF	"eth0"
 #define BUF_SIZ		1024
 
+int check_mac_addr(struct ether_header *eh)
+{
+    if (eh->ether_dhost[0] == DEST_MAC0 &&
+        eh->ether_dhost[1] == DEST_MAC1 &&
+        eh->ether_dhost[2] == DEST_MAC2 &&
+        eh->ether_dhost[3] == DEST_MAC3 &&
+        eh->ether_dhost[4] == DEST_MAC4 &&
+        eh->ether_dhost[5] == DEST_MAC5) {
+        printf("Correct destination MAC address\n");
+        return 1;
+    }
+    else
+    {
+        printf("Wrong destination MAC: %x:%x:%x:%x:%x:%x\n",
+                                    eh->ether_dhost[0],
+                                    eh->ether_dhost[1],
+                                    eh->ether_dhost[2],
+                                    eh->ether_dhost[3],
+                                    eh->ether_dhost[4],
+                                    eh->ether_dhost[5]);
+        return 0;
+    }
+}
+
+
 int main(int argc, char *argv[])
 {
 	char sender[INET6_ADDRSTRLEN];
@@ -78,31 +103,16 @@ int main(int argc, char *argv[])
 		close(sockfd);
 		exit(EXIT_FAILURE);
 	}
+while(1)
+{
+    printf("listener: Waiting to recvfrom...\n");
+    numbytes = recvfrom(sockfd, buf, BUF_SIZ, 0, NULL, NULL);
+    printf("listener: got packet %lu bytes\n", numbytes);
 
-repeat:	printf("listener: Waiting to recvfrom...\n");
-	numbytes = recvfrom(sockfd, buf, BUF_SIZ, 0, NULL, NULL);
-	printf("listener: got packet %lu bytes\n", numbytes);
-
-	/* Check the packet is for me */
-	if (eh->ether_dhost[0] == DEST_MAC0 &&
-			eh->ether_dhost[1] == DEST_MAC1 &&
-			eh->ether_dhost[2] == DEST_MAC2 &&
-			eh->ether_dhost[3] == DEST_MAC3 &&
-			eh->ether_dhost[4] == DEST_MAC4 &&
-			eh->ether_dhost[5] == DEST_MAC5) {
-		printf("Correct destination MAC address\n");
-	} else {
-		printf("Wrong destination MAC: %x:%x:%x:%x:%x:%x\n",
-						eh->ether_dhost[0],
-						eh->ether_dhost[1],
-						eh->ether_dhost[2],
-						eh->ether_dhost[3],
-						eh->ether_dhost[4],
-						eh->ether_dhost[5]);
-		ret = -1;
-		goto done;
-	}
-
+    /* Check the packet is for me */
+    if(check_mac_addr(eh))
+    {
+        ret = -1;
 	/* Get source IP */
 	((struct sockaddr_in *)&their_addr)->sin_addr.s_addr = iph->saddr;
 	inet_ntop(AF_INET, &((struct sockaddr_in*)&their_addr)->sin_addr, sender, sizeof sender);
@@ -115,8 +125,8 @@ repeat:	printf("listener: Waiting to recvfrom...\n");
 		/* ignore if I sent it */
 		if (strcmp(sender, inet_ntoa(((struct sockaddr_in *)&if_ip.ifr_addr)->sin_addr)) == 0)	{
 			printf("but I sent it :(\n");
-			ret = -1;
-			goto done;
+                        ret = -1;
+                        continue;
 		}
 	}
 
@@ -127,8 +137,8 @@ repeat:	printf("listener: Waiting to recvfrom...\n");
 	printf("\tData:");
 	for (i=0; i<numbytes; i++) printf("%02x:", buf[i]);
 	printf("\n");
-
-done:	goto repeat;
+    }
+}
 
 	close(sockfd);
 	return ret;
