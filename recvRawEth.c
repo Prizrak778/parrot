@@ -30,6 +30,8 @@
 #define DEFAULT_IF	"eth0"
 #define BUF_SIZ		1024
 
+#define LEN_NET         14
+
 int check_mac_addr(struct ether_header *eh)
 {
     if (eh->ether_dhost[0] == DEST_MAC0 &&
@@ -54,19 +56,32 @@ int check_mac_addr(struct ether_header *eh)
     }
 }
 
+int check_message(uint8_t buf[])
+{
+    int flag = 1;
+    uint8_t buf_ckeck[] = { 0xde, 0xad, 0xbe, 0xef};
+    for(int i = 0; i < 4; i++)
+    {
+        if(buf_ckeck[i] != buf[LEN_NET + i])
+        {
+            flag = 0;
+        }
+    }
+    return flag;
+}
 
 int main(int argc, char *argv[])
 {
-	char sender[INET6_ADDRSTRLEN];
-	int sockfd, ret, i;
-	int sockopt;
-	ssize_t numbytes;
-	struct ifreq ifopts;	/* set promiscuous mode */
-	struct ifreq if_ip;	/* get ip addr */
-	struct sockaddr_storage their_addr;
-	uint8_t buf[BUF_SIZ];
-	char ifName[IFNAMSIZ];
-	
+        char sender[INET6_ADDRSTRLEN];
+        int sockfd, ret, i;
+        int sockopt;
+        ssize_t numbytes;
+        struct ifreq ifopts;	/* set promiscuous mode */
+        struct ifreq if_ip;	/* get ip addr */
+        struct sockaddr_storage their_addr;
+        uint8_t buf[BUF_SIZ];
+        char ifName[IFNAMSIZ];
+        int flag = 1;
 	/* Get interface name */
 	if (argc > 1)
 		strcpy(ifName, argv[1]);
@@ -105,6 +120,7 @@ int main(int argc, char *argv[])
 	}
 while(1)
 {
+    flag = 1;
     printf("listener: Waiting to recvfrom...\n");
     numbytes = recvfrom(sockfd, buf, BUF_SIZ, 0, NULL, NULL);
     printf("listener: got packet %lu bytes\n", numbytes);
@@ -126,17 +142,27 @@ while(1)
 		if (strcmp(sender, inet_ntoa(((struct sockaddr_in *)&if_ip.ifr_addr)->sin_addr)) == 0)	{
 			printf("but I sent it :(\n");
                         ret = -1;
-                        continue;
+                        flag = 0;
 		}
 	}
-
-	/* UDP payload length */
-	ret = ntohs(udph->len) - sizeof(struct udphdr);
-
-	/* Print packet */
-	printf("\tData:");
-	for (i=0; i<numbytes; i++) printf("%02x:", buf[i]);
-	printf("\n");
+        if(flag)
+        {
+            /* UDP payload length */
+            /* Проверка на ключевое слово*/
+            ret = ntohs(udph->len) - sizeof(struct udphdr);
+            if(check_message(buf))
+            {
+                /* Print packet */
+                printf("\tData:");
+                for (i=0; i<numbytes; i++)
+                    printf("%02x:", buf[i]);
+                printf("\n");
+            }
+            else
+            {
+                printf("Wrong key\n");
+            }
+        }
     }
 }
 
