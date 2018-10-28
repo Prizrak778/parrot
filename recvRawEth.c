@@ -17,6 +17,7 @@
 #include <net/if.h>
 #include <netinet/ether.h>
 
+//MAC addr: lo
 #define DEST_MAC0	0x00
 #define DEST_MAC1	0x00
 #define DEST_MAC2	0x00
