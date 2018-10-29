@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
 				if(check_message(buf, buf_ckeck))
 				{
 					/* Print packet */
-					printf("\tData:");
+					printf("Answer data:");
 					for (int i=0; i<numbytes; i++)
 						printf("%02x:", buf[i]);
 					printf("\n");
