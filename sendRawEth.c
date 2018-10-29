@@ -23,20 +23,9 @@ int check_mac_addr(struct ether_header *eh)
 	eh->ether_dhost[4] == MY_DEST_MAC4 &&
 	eh->ether_dhost[5] == MY_DEST_MAC5)
 	{
-		printf("Correct destination MAC address\n");
 		return 1;
 	}
-	else
-	{
-		printf("Wrong destination MAC: %x:%x:%x:%x:%x:%x\n",
-		eh->ether_dhost[0],
-		eh->ether_dhost[1],
-		eh->ether_dhost[2],
-		eh->ether_dhost[3],
-		eh->ether_dhost[4],
-		eh->ether_dhost[5]);
-		return 0;
-	}
+	return 0;
 }
 
 int main(int argc, char *argv[])
@@ -44,6 +33,7 @@ int main(int argc, char *argv[])
 	uint8_t buf[BUF_SIZ];
 	int sockfd;
 	int sockrecv;
+	int ret = -1;
 	struct ifreq if_idx;
 	struct ifreq if_mac;
 	int tx_len = 0;
@@ -61,7 +51,8 @@ int main(int argc, char *argv[])
 		strcpy(ifName, DEFAULT_IF);
 
 	/* Open RAW socket to send on */
-	if ((sockfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW)) == -1) {
+	if ((sockfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW)) == -1)
+	{
 	    perror("socket");
 	}
 	if((sockrecv = init_raw_socket(ifName))<0)
@@ -74,6 +65,7 @@ int main(int argc, char *argv[])
 	strncpy(if_idx.ifr_name, ifName, IFNAMSIZ-1);
 	if (ioctl(sockfd, SIOCGIFINDEX, &if_idx) < 0)
 	    perror("SIOCGIFINDEX");
+
 	/* Get the MAC address of the interface to send on */
 	memset(&if_mac, 0, sizeof(struct ifreq));
 	strncpy(if_mac.ifr_name, ifName, IFNAMSIZ-1);
@@ -116,7 +108,11 @@ int main(int argc, char *argv[])
 	socket_address.sll_addr[3] = MY_DEST_MAC3;
 	socket_address.sll_addr[4] = MY_DEST_MAC4;
 	socket_address.sll_addr[5] = MY_DEST_MAC5;
+
+	/* Header structures */
 	eh = (struct ether_header *) buf;
+	struct udphdr *udph = (struct udphdr *) (buf + sizeof(struct iphdr) + sizeof(struct ether_header));
+
 	/* Send packet */
 	int flag = 1;
 	while(1)
@@ -124,14 +120,29 @@ int main(int argc, char *argv[])
 		if (sendto(sockfd, sendbuf, tx_len, 0, (struct sockaddr*)&socket_address, sizeof(struct sockaddr_ll)) < 0)
 			printf("Send failed\n");
 		printf("Send work\n");
-		sleep(1);
+		flag = 1;
 		while(flag)
 		{
-			printf("listener: Waiting to answer...\n");
+			//printf("listener: Waiting to answer...\n");
 			numbytes = recvfrom(sockrecv, buf, BUF_SIZ, 0, NULL, NULL);
-			printf("listener: got packet %lu bytes\n", numbytes);
-			check_mac_addr(eh);
+			//printf("listener: got packet %lu bytes\n", numbytes);
+			ret = -1;
+			if(check_mac_addr(eh))
+			{
+				ret = ntohs(udph->len) - sizeof(struct udphdr);
+				uint8_t buf_ckeck[] = { 0xde, 0xad, 0xef, 0xbe};
+				if(check_message(buf, buf_ckeck))
+				{
+					/* Print packet */
+					printf("\tData:");
+					for (int i=0; i<numbytes; i++)
+						printf("%02x:", buf[i]);
+					printf("\n");
+					flag = 0;
+				}
+			}
 		}
+		sleep(1);
 	}
 	return 0;
 }

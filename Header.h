@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <linux/ip.h>
+#include <linux/udp.h>
 
 #define ETHER_TYPE	0x0800
 #define DEFAULT_IF	"eth0"
@@ -46,10 +48,10 @@ int init_raw_socket(char ifName[])
 	return sockfd;
 }
 
-int check_message(uint8_t buf[])
+int check_message(uint8_t buf[], uint8_t buf_ckeck[])
 {
 	int flag = 1;
-	uint8_t buf_ckeck[] = { 0xde, 0xad, 0xbe, 0xef};
+	//uint8_t buf_ckeck[] = { 0xde, 0xad, 0xbe, 0xef};
 	for(int i = 0; i < 4; i++)
 	{
 		if(buf_ckeck[i] != buf[LEN_NET + i])
