@@ -5,15 +5,7 @@
  *  (at your option) any later version.
  */
 
-#include <arpa/inet.h>
-#include <linux/if_packet.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <net/if.h>
-#include <netinet/ether.h>
+#include "Header.h"
 
 #define MY_DEST_MAC0	0x00
 #define MY_DEST_MAC1	0x00
@@ -22,12 +14,36 @@
 #define MY_DEST_MAC4	0x00
 #define MY_DEST_MAC5	0x01
 
-#define DEFAULT_IF	"eth0"
-#define BUF_SIZ		1024
+int check_mac_addr(struct ether_header *eh)
+{
+	if (eh->ether_dhost[0] == MY_DEST_MAC0 &&
+	eh->ether_dhost[1] == MY_DEST_MAC1 &&
+	eh->ether_dhost[2] == MY_DEST_MAC2 &&
+	eh->ether_dhost[3] == MY_DEST_MAC3 &&
+	eh->ether_dhost[4] == MY_DEST_MAC4 &&
+	eh->ether_dhost[5] == MY_DEST_MAC5)
+	{
+		printf("Correct destination MAC address\n");
+		return 1;
+	}
+	else
+	{
+		printf("Wrong destination MAC: %x:%x:%x:%x:%x:%x\n",
+		eh->ether_dhost[0],
+		eh->ether_dhost[1],
+		eh->ether_dhost[2],
+		eh->ether_dhost[3],
+		eh->ether_dhost[4],
+		eh->ether_dhost[5]);
+		return 0;
+	}
+}
 
 int main(int argc, char *argv[])
 {
+	uint8_t buf[BUF_SIZ];
 	int sockfd;
+	int sockrecv;
 	struct ifreq if_idx;
 	struct ifreq if_mac;
 	int tx_len = 0;
@@ -36,6 +52,7 @@ int main(int argc, char *argv[])
 	struct iphdr *iph = (struct iphdr *) (sendbuf + sizeof(struct ether_header));
 	struct sockaddr_ll socket_address;
 	char ifName[IFNAMSIZ];
+	ssize_t numbytes;
 	
 	/* Get interface name */
 	if (argc > 1)
@@ -46,6 +63,10 @@ int main(int argc, char *argv[])
 	/* Open RAW socket to send on */
 	if ((sockfd = socket(AF_PACKET, SOCK_RAW, IPPROTO_RAW)) == -1) {
 	    perror("socket");
+	}
+	if((sockrecv = init_raw_socket(ifName))<0)
+	{
+		printf("Fail init raw socket\n");
 	}
 
 	/* Get the index of the interface to send on */
@@ -95,10 +116,22 @@ int main(int argc, char *argv[])
 	socket_address.sll_addr[3] = MY_DEST_MAC3;
 	socket_address.sll_addr[4] = MY_DEST_MAC4;
 	socket_address.sll_addr[5] = MY_DEST_MAC5;
-
+	eh = (struct ether_header *) buf;
 	/* Send packet */
-	if (sendto(sockfd, sendbuf, tx_len, 0, (struct sockaddr*)&socket_address, sizeof(struct sockaddr_ll)) < 0)
-	    printf("Send failed\n");
-
+	int flag = 1;
+	while(1)
+	{
+		if (sendto(sockfd, sendbuf, tx_len, 0, (struct sockaddr*)&socket_address, sizeof(struct sockaddr_ll)) < 0)
+			printf("Send failed\n");
+		printf("Send work\n");
+		sleep(1);
+		while(flag)
+		{
+			printf("listener: Waiting to answer...\n");
+			numbytes = recvfrom(sockrecv, buf, BUF_SIZ, 0, NULL, NULL);
+			printf("listener: got packet %lu bytes\n", numbytes);
+			check_mac_addr(eh);
+		}
+	}
 	return 0;
 }
