@@ -15,6 +15,20 @@
 #define BUF_SIZ		1024
 #define LEN_NET     14
 
+#define DEST_MAC0	0x08
+#define DEST_MAC1	0x00
+#define DEST_MAC2	0x27
+#define DEST_MAC3	0x1f
+#define DEST_MAC4	0xc0
+#define DEST_MAC5	0x37
+
+#define MY_DEST_MAC0	0x8e
+#define MY_DEST_MAC1	0x39
+#define MY_DEST_MAC2	0xd2
+#define MY_DEST_MAC3	0xc9
+#define MY_DEST_MAC4	0x31
+#define MY_DEST_MAC5	0xe0
+
 int init_raw_socket(char ifName[])
 {
 	struct ifreq ifopts;	/* set promiscuous mode */

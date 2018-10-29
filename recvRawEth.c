@@ -11,12 +11,7 @@
 #include "Header.h"
 
 //MAC addr: lo
-#define DEST_MAC0	0x00
-#define DEST_MAC1	0x00
-#define DEST_MAC2	0x00
-#define DEST_MAC3	0x00
-#define DEST_MAC4	0x00
-#define DEST_MAC5	0x01
+
 
 
 
@@ -24,12 +19,12 @@
 
 int check_mac_addr(struct ether_header *eh)
 {
-	if (eh->ether_dhost[0] == DEST_MAC0 &&
-	eh->ether_dhost[1] == DEST_MAC1 &&
-	eh->ether_dhost[2] == DEST_MAC2 &&
-	eh->ether_dhost[3] == DEST_MAC3 &&
-	eh->ether_dhost[4] == DEST_MAC4 &&
-	eh->ether_dhost[5] == DEST_MAC5)
+	if (eh->ether_dhost[0] == MY_DEST_MAC0 &&
+	eh->ether_dhost[1] == MY_DEST_MAC1 &&
+	eh->ether_dhost[2] == MY_DEST_MAC2 &&
+	eh->ether_dhost[3] == MY_DEST_MAC3 &&
+	eh->ether_dhost[4] == MY_DEST_MAC4 &&
+	eh->ether_dhost[5] == MY_DEST_MAC5)
 	{
 		printf("Correct destination MAC address\n");
 		return 1;
